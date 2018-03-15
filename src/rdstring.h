@@ -43,6 +43,7 @@ char *rd_string_render (const char *templ,
 
 /**
  * @brief An immutable string tuple (name, value) in a single allocation.
+ *        \p value may be NULL.
  */
 typedef struct rd_strtup_s {
         char *value;
