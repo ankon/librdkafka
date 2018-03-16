@@ -343,6 +343,8 @@ typedef enum {
         RD_KAFKA_RESP_ERR__NOENT = -156,
         /** Read underflow */
         RD_KAFKA_RESP_ERR__UNDERFLOW = -155,
+        /** Invalid type */
+        RD_KAFKA_RESP_ERR__INVALID_TYPE = -154,
 
 	/** End internal error codes */
 	RD_KAFKA_RESP_ERR__END = -100,
@@ -4198,6 +4200,512 @@ rd_kafka_interceptor_add_on_request_sent (
         rd_kafka_t *rk, const char *ic_name,
         rd_kafka_interceptor_f_on_request_sent_t *on_request_sent,
         void *ic_opaque);
+
+
+
+
+/**@}*/
+
+
+
+/**
+ * @name Auxiliary types
+ *
+ * @{
+ */
+
+
+
+/**
+ * @brief Topic result provides per-topic operation result information.
+ *
+ */
+typedef struct rd_kafka_topic_result_t rd_kafka_topic_result_t;
+
+/**
+ * @returns the error code for the given topic result.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_topic_result_error (const rd_kafka_topic_result_t *topicres);
+
+/**
+ * @returns the human readable error string for the given topic result,
+ *          or NULL if there was no error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_topic_result_error_string (const rd_kafka_topic_result_t *topicres);
+
+/**
+ * @returns the name of the topic for the given topic result.
+ * @remark lifetime of the returned string is the same as the \p topicres.
+ *         
+ */
+RD_EXPORT const char *
+rd_kafka_topic_result_name (const rd_kafka_topic_result_t *topicres);
+
+
+/**@}*/
+
+
+/**
+ * @name Admin API
+ *
+ * @{
+ *
+ * @brief The Admin API enables applications perform administrative
+ *        Apache Kafka tasks, such as creating and deleting topics,
+ *        altering and reading broker configuration, etc.
+ *
+ * The Admin API is asynchronous and makes use of librdkafka's standard
+ * \c rd_kafka_queue_t queues to propagate the result of an admin operation
+ * back to the application.
+ * The supplied queue may be any queue, such as a temporary single-call queue,
+ * a shared queue used for multiple requests, or even the main queue or
+ * consumer queues.
+ *
+ * Use \c rd_kafka_queue_poll() to collect the result of an admin operation
+ * from the queue of your choice, then extract the admin API-specific result
+ * type by using the corresponding \c rd_kafka_event_CreateTopics_result,
+ * \c rd_kafka_event_DescribeConfigs_result, etc, methods.
+ * Use the getter methods on the \c .._result_t type to extract response
+ * information and finally destroy the result and event by calling
+ * \c rd_kafka_event_destroy().
+ */
+
+
+
+/**
+ * @brief AdminOption provides a generic mechanism for setting optional
+ *        parameters for the Admin API requests.
+ *
+ * @remark Since AdminOption is decoupled from the actual request type
+ *         there is no enforcement to disallow setting unrelated properties,
+ *         e.g. setting validate_only on a DescribeConfigs request is allowed
+ *         but is silently ignored by DescribeConfigs.
+ *         Future versions may introduce such enforcement.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_AdminOption_set_int32 (rd_kafka_AdminOption_t *options,
+                                const char *name, int32_t value,
+                                char *errstr, size_t errstr_size);
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_AdminOption_set_str (rd_kafka_AdminOption_t *options,
+                              const char *name, const char *value,
+                              char *errstr, size_t errstr_size);
+
+
+
+
+/**
+ * @section CreateTopics - create topics in cluster
+ *
+ *
+ */
+
+
+typedef struct rd_kafka_NewTopic_s rd_kafka_NewTopic_t;
+
+RD_EXPORT rd_kafka_NewTopic_t *
+rd_kafka_NewTopic_new (const char *topic,
+                       int num_partitions,
+                       int replication_factor);
+
+RD_EXPORT void
+rd_kafka_NewTopic_destroy (rd_kafka_NewTopic_t *new_topic);
+
+RD_EXPORT void
+rd_kafka_NewTopic_destroy_array (rd_kafka_NewTopic_t **new_topics,
+                                 size_t new_topic_cnt);
+
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_NewTopic_set_replica_assignment (rd_kafka_NewTopic_t *new_topic,
+                                          int32_t partition,
+                                          int32_t *broker_ids,
+                                          size_t broker_id_cnt);
+
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_NewTopic_add_config (rd_kafka_NewTopic_t *new_topic,
+                              const char *name, const char *value);
+
+
+/**
+ * @brief Create topics in cluster as specified by the \p new_topics
+ *        array of size \p new_topic_cnt elements.
+ *
+ * @param new_topics Array of new topics to create.
+ * @param new_topic_cnt Number of elements in \p new_topics array.
+ * @param options Optional admin options, or NULL for defaults.
+ * @param rkqu Queue to emit result on.
+ *
+ * @remark The result event type emitted on the supplied queue is of type
+ *         \c rd_kafka_CreateTopics_result_t.
+ */
+RD_EXPORT
+void rd_kafka_admin_CreateTopics (rd_kafka_t *rk,
+                                  const rd_kafka_NewTopic_t **new_topics,
+                                  size_t new_topic_cnt,
+                                  const rd_kafka_admin_option_t *options,
+                                  rd_kafka_queue_t *rkqu);
+
+
+/**
+ * @brief CreateTopics result type and methods
+ */
+typedef struct rd_kafka_CreateTopics_result_s rd_kafka_CreateTopics_result_t;
+
+/**
+ * @returns the request-level error/success for a CreateTopics request.
+ *          Even if the returned value is RD_KAFKA_RESP_ERR_NO_ERROR there
+ *          may be individual topics that failed, extract per-topic information
+ *          with rd_kafka_CreateTopics_result_topics() to check per-topic
+ *          errors.
+ *
+ * @param errstrp is set to a human-readable error string, if there was an
+ *        error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_CreateTopics_result_error (
+        const rd_kafka_CreateTopics_result_t *result,
+        const char **errstrp);
+
+
+/**
+ * @brief Get an array of topic results from a CreateTopics result.
+ *
+ * The returned \p topics life-time is the same as the \p result object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_topic_result_t **
+rd_kafka_CreateTopics_result_topics (
+        const rd_kafka_CreateTopics_result_t *result,
+        size_t *cntp);
+
+
+
+
+
+/**
+ * @section DeleteTopics - delete topics from cluster
+ *
+ *
+ */
+
+typedef struct rd_kafka_DeleteTopic_s rd_kafka_DeleteTopic_t;
+
+RD_EXPORT rd_kafka_DeleteTopic_t *
+rd_kafka_DeleteTopic_new (const char *topic);
+
+RD_EXPORT void
+rd_kafka_DeleteTopic_destroy (rd_kafka_DeleteTopic_t *deltopic);
+
+
+/**
+ * @brief Delete topics from cluster as specified by the \p topics
+ *        array of size \p topic_cnt elements.
+ *
+ * @param topics Array of topics to delete.
+ * @param topic_cnt Number of elements in \p topics array.
+ * @param options Optional admin options, or NULL for defaults.
+ * @param rkqu Queue to emit result on.
+ *
+ * @remark The result event type emitted on the supplied queue is of type
+ *         \c rd_kafka_DeleteTopics_result_t.
+ */
+RD_EXPORT
+void rd_kafka_admin_DeleteTopics (rd_kafka_t *rk,
+                                  const rd_kafka_DeleteTopic_t **topics,
+                                  size_t topic_cnt,
+                                  const rd_kafka_admin_option_t *options,
+                                  rd_kafka_queue_t *rkqu);
+
+
+
+typedef struct rd_kafka_DeleteTopic_result_s rd_kafka_DeleteTopic_result_t;
+
+/**
+ * @brief DeleteTopics result type and methods
+ */
+typedef struct rd_kafka_DeleteTopics_result_s rd_kafka_DeleteTopics_result_t;
+
+/**
+ * @returns the request-level error/success for a DeleteTopics request.
+ *          Even if the returned value is RD_KAFKA_RESP_ERR_NO_ERROR there
+ *          may be individual topics that failed, extract per-topic information
+ *          with rd_kafka_DeleteTopics_result_topics() to check per-topic
+ *          errors.
+ *
+ * @param errstrp is set to a human-readable error string, if there was an
+ *        error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_DeleteTopics_result_error (
+        const rd_kafka_DeleteTopics_result_t *result,
+        const char **errstrp);
+
+
+/**
+ * @brief Get an array of topic results from a DeleteTopics result.
+ *
+ * The returned \p topics life-time is the same as the \p result object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_topic_result_t **
+rd_kafka_DeleteTopics_result_topics (
+        const rd_kafka_DeleteTopics_result_t *result,
+        size_t *cntp);
+
+
+
+
+
+
+/**
+ * @section CreatePartitions - add partitions to topic.
+ *
+ *
+ */
+
+
+typedef struct rd_kafka_NewPartitions_s rd_kafka_NewPartitions_t;
+
+RD_EXPORT rd_kafka_NewPartitions_t *
+rd_kafka_NewPartitions_new (const char *topic,
+                            int new_total_count);
+
+RD_EXPORT void
+rd_kafka_NewPartitions_destroy (rd_kafka_NewPartitions_t *new_parts);
+
+RD_EXPORT void
+rd_kafka_NewPartitions_destroy_array (rd_kafka_NewPartitions_t **new_parts,
+                                      size_t new_topic_cnt);
+
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_NewPartitions_set_replica_assignment (rd_kafka_NewPartitions_t *new_parts,
+                                               int32_t partition,
+                                               int32_t *broker_ids,
+                                               size_t broker_id_cnt);
+
+
+RD_EXPORT void
+rd_kafka_admin_CreatePartitions (rd_kafka_t *rk,
+                                 const rd_kafka_NewPartitions_t **partitions,
+                                 size_t partition_cnt,
+                                 const rd_kafka_admin_option_t *options,
+                                 rd_kafka_queue_t *rkqu);
+
+
+typedef struct rd_kafka_DeleteTopic_result_s rd_kafka_DeleteTopic_result_t;
+
+/**
+ * @brief CreatePartitions result type and methods
+ */
+typedef struct rd_kafka_CreatePartitions_result_s rd_kafka_CreatePartitions_result_t;
+
+/**
+ * @returns the request-level error/success for a CreatePartitions request.
+ *          Even if the returned value is RD_KAFKA_RESP_ERR_NO_ERROR there
+ *          may be individual topics that failed, extract per-topic information
+ *          with rd_kafka_CreatePartitions_result_topics() to check per-topic
+ *          errors.
+ *
+ * @param errstrp is set to a human-readable error string, if there was an
+ *        error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_CreatePartitions_result_error (
+        const rd_kafka_CreatePartitions_result_t *result,
+        const char **errstrp);
+
+
+/**
+ * @brief Get an array of topic results from a CreatePartitions result.
+ *
+ * The returned \p topics life-time is the same as the \p result object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_topic_result_t **
+rd_kafka_CreatePartitions_result_topics (
+        const rd_kafka_CreatePartitions_result_t *result,
+        size_t *cntp);
+
+
+
+
+
+
+typedef struct rd_kafka_ConfigEntry_s rd_kafka_ConfigEntry_t;
+
+
+/**
+ * @returns the configuration property name
+ */
+RD_EXPORT const char *
+rd_kafka_ConfigEntry_get_name (const rd_kafka_ConfigEntry_t *conf);
+
+/**
+ * @returns the configuration value.
+ * FIXME: NULL?
+ */
+RD_EXPORT const char *
+rd_kafka_ConfigEntry_get_value (const rd_kafka_ConfigEntry_t *conf);
+
+
+/**
+ * @returns 1 if the config property is read-only on the broker, else 0.
+ * @remark Shall only be used on a DescribeConfigs result, otherwise returns -1.
+ */
+RD_EXPORT int
+rd_kafka_ConfigEntry_get_is_read_only (const rd_kafka_ConfigEntry_t *conf);
+
+/**
+ * @returns 1 if the config property is set to its default value on the broker,
+ *          else 0.
+ * @remark Shall only be used on a DescribeConfigs result, otherwise returns -1.
+ */
+RD_EXPORT int
+rd_kafka_ConfigEntry_get_is_default (const rd_kafka_ConfigEntry_t *conf);
+
+/**
+ * @returns 1 if the config property contains sensitive information (such as
+ *          security configuration), else 0.
+ * @remark An application should take care not to include the value of
+ *         sensitive configuration entries in its output.
+ * @remark Shall only be used on a DescribeConfigs result, otherwise returns -1.
+ */
+RD_EXPORT int
+rd_kafka_ConfigEntry_get_is_sensitive (const rd_kafka_ConfigEntry_t *conf);
+
+
+
+
+typedef struct rd_kafka_ConfigResource_s rd_kafka_ConfigResource_t;
+
+RD_EXPORT rd_kafka_ConfigResource_t *
+rd_kafka_ConfigResource_new (rd_kafka_ConfigResourceType_t restype,
+                             const char *resname);
+
+
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_ConfigResource_add_config (rd_kafka_ConfigResource_t *configs,
+                                    const char *name, const char *value);
+
+/**
+ * @brief Get an array of config entries from a ConfigResource object.
+ *
+ * The returned object life-times are the same as the \p res object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_ConfigEntry_t **
+rd_kafka_ConfigResource_get_configs (const rd_kafka_ConfigResource_t *res,
+                                     size_t *cntp);
+
+
+
+/**
+ * @section AlterConfigs - alter cluster configuration.
+ *
+ *
+ */
+
+
+RD_EXPORT
+void rd_kafka_admin_AlterConfigs (rd_kafka_t *rk,
+                                  const rd_kafka_ConfigResource_t *configs,
+                                  size_t config_cnt,
+                                  const rd_kafka_admin_option_t *options,
+                                  rd_kafka_queue_t *rkqu);
+
+
+
+
+
+
+
+/**
+ * @brief AlterConfigs result type and methods
+ */
+typedef struct rd_kafka_AlterConfigs_result_s rd_kafka_AlterConfigs_result_t;
+
+/**
+ * @returns the request-level error/success for a AlterConfigs request.
+ *          Even if the returned value is RD_KAFKA_RESP_ERR_NO_ERROR there
+ *          may be individual resources that failed, extract per-resource
+ *          information with rd_kafka_AlterConfigs_result_resources() to
+ *          check per-resource errors.
+ *
+ * @param errstrp is set to a human-readable error string, if there was an
+ *        error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_AlterConfigs_result_error (
+        const rd_kafka_AlterConfigs_result_t *result,
+        const char **errstrp);
+
+
+
+typedef struct rd_kafka_ConfigResource_result_s rd_kafka_ConfigResource_result_t;
+
+/**
+ * @brief Get an array of resource results from a AlterConfigs result.
+ *
+ * The returned \p resources life-time is the same as the \p result object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_ConfigResource_result_t **
+rd_kafka_AlterConfigs_result_resources (
+        const rd_kafka_AlterConfigs_result_t *result,
+        size_t *cntp);
+
+
+
+
+
+
+/**
+ * @section DescribeConfigs - retrieve cluster configuration.
+ *
+ *
+ */
+
+RD_EXPORT
+void rd_kafka_admin_DescribeConfigs (rd_kafka_t *rk,
+                                     const rd_kafka_ConfigResource_t *resources,
+                                     size_t config_cnt,
+                                     const rd_kafka_admin_option_t *options,
+                                     rd_kafka_queue_t *rkqu);
+
+
+/**
+ * @brief DescribeConfigs result type and methods
+ */
+typedef struct rd_kafka_DescribeConfigs_result_s rd_kafka_DescribeConfigs_result_t;
+
+/**
+ * @returns the request-level error/success for a DescribeConfigs request.
+ *          Even if the returned value is RD_KAFKA_RESP_ERR_NO_ERROR there
+ *          may be individual resources that failed, extract per-resource
+ *          information with rd_kafka_DescribeConfigs_result_resources() to
+ *          check per-resource errors.
+ *
+ * @param errstrp is set to a human-readable error string, if there was an
+ *        error.
+ */
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_DescribeConfigs_result_error (
+        const rd_kafka_DescribeConfigs_result_t *result,
+        const char **errstrp);
+
+
+/**
+ * @brief Get an array of resource results from a DescribeConfigs result.
+ *
+ * The returned \p resources life-time is the same as the \p result object.
+ * @param cntp is updated to the number of elements in the array.
+ */
+RD_EXPORT const rd_kafka_ConfigResource_t **
+rd_kafka_DescribeConfigs_result_resources (
+        const rd_kafka_DescribeConfigs_result_t *result,
+        size_t *cntp);
 
 
 

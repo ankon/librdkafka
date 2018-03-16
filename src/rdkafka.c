@@ -413,6 +413,8 @@ static const struct rd_kafka_err_desc rd_kafka_err_descs[] = {
                   "Local: No such entry"),
         _ERR_DESC(RD_KAFKA_RESP_ERR__UNDERFLOW,
                   "Local: Read underflow"),
+        _ERR_DESC(RD_KAFKA_RESP_ERR__INVALID_TYPE,
+                  "Local: Invalid type"),
 
 	_ERR_DESC(RD_KAFKA_RESP_ERR_UNKNOWN,
 		  "Unknown broker error"),

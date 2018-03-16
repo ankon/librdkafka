@@ -26,50 +26,34 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RDKAFKA_ADMIN_H_
-#define _RDKAFKA_ADMIN_H_
+#ifndef _RDKAFKA_AUX_H_
+#define _RDKAFKA_AUX_H_
 
+/**
+ * @name Auxiliary types
+ */
 
 #include "rdkafka_conf.h"
+
+
 
 /**
  * @brief Topic [ + Error code + Error string ]
  *
- * Auxiliary type.
- * Single allocation.
+ * @remark Public type.
+ * @remark Single allocation.
  */
-struct rd_kafka_aux_topic_err {
-        char *topic;
-        rd_kafka_resp_err_t err;
-        char *errstr;
-        char data[1];           /**< topic followed by errstr */
+struct rd_kafka_topic_result_s {
+        char *topic;             /**< Points to data */
+        rd_kafka_resp_err_t err; /**< Error code */
+        char *errstr;            /**< Points to data after topic, unless NULL */
+        char  data[1];           /**< topic followed by errstr */
 };
 
-#define rd_kafka_aux_topic_err_destroy(terr) rd_free(terr)
-
-static RD_INLINE RD_UNUSED
-struct rd_kafka_aux_topic_err *
-rd_kafka_aux_topic_err_new (const char *topic, rd_kafka_resp_err_t err,
-                            const char *errstr) {
-        size_t tlen = strlen(topic) + 1;
-        size_t elen = errstr ? strlen(elen) + 1 : 0;
-
-        struct rd_kafka_aux_topic_err *terr;
-
-        terr = rd_malloc(sizeof(*terr + tlen + elen));
-
-        terr->topic = terr->data;
-        memcpy(terr->topic, topic, tlen);
-
-        if (errstr) {
-                terr->errstr = terr->topic + tlen;
-                memcpy(terr->errstr, errstr, elen);
-        } else {
-                terr->errstr = NULL;
-        }
-
-        return terr;
-}
+#define rd_kafka_topic_result_destroy(terr) rd_free(terr)
+rd_kafka_topic_result_t *
+rd_kafka_topic_result_new (const char *topic, rd_kafka_resp_err_t err,
+                           const char *errstr);
 
 
 /**
@@ -211,9 +195,9 @@ struct rd_kafka_ConfigEntry_s {
         rd_strtup_t kv;           /**< Name/Value pair */
 
         /* Response */
-        const bool readonly;            /**< Value is read-only (on broker) */
-        const bool is_default;          /**< Value is at its default */
-        const bool is_sensitive;        /**< Value is sensitive */
+        bool readonly;            /**< Value is read-only (on broker) */
+        bool is_default;          /**< Value is at its default */
+        bool is_sensitive;        /**< Value is sensitive */
 };
 
 /**
@@ -225,7 +209,7 @@ struct rd_kafka_ConfigEntry_s {
  * https://cwiki.apache.org/confluence/display/KAFKA/KIP-133%3A+Describe+and+Alter+Configs+Admin+APIs
  */
 struct rd_kafka_ConfigResource {
-        rd_kafka_ConfigResourceType_t restype; /**< Resource type */
+        rd_kafka_ConfigResourceType_t type;/**< Resource type */
         const char *name;                  /**< Resource name */
         rd_list_t config;                  /**< Type (rd_kafka_ConfigEntry_t *):
                                             *   List of config props */
@@ -235,15 +219,13 @@ struct rd_kafka_ConfigResource {
         char *errstr;                      /**< Response error string */
 };
 
-
-struct rd_kafka_AlterConfigs_result_s {
-        rd_list_t configs;    /**< Type (rd_kafka_ConfigResource_t *) */
+struct rd_kafka_ConfigList_s {
+        rd_list_t resources;  /**< Type (struct rd_kafka_ConfigResource *):
+                               *   List of config resources */
 };
 
-struct rd_kafka_ConfigResource_result_s {
-        rd_list_t resources;  /**< Type (struct rd_kafka_ConfigResource *):
-                               *   List of config resources, sans config
-                               *   but with response error values. */
+struct rd_kafka_AlterConfigs_result_s {
+        rd_list_t configs;    /**< Type (rd_kafka_ConfigList_t) */
 };
 
 /**@}*/
@@ -256,7 +238,7 @@ struct rd_kafka_ConfigResource_result_s {
  */
 
 struct rd_kafka_DescribeConfigs_result_s {
-        rd_list_t configs;    /**< Type (rd_kafka_ConfigResource_t *) */
+        rd_list_t configs;    /**< Type (rd_kafka_ConfigList_t) */
 };
 
 /**@}*/
@@ -287,4 +269,4 @@ struct rd_kafka_CreatePartitions_result_s {
 
 /**@}*/
 
-#endif /* _RDKAFKA_ADMIN_H_ */
+#endif /* _RDKAFKA_AUX_H_ */

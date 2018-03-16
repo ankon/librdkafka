@@ -346,4 +346,49 @@ struct rd_kafka_topic_conf_s {
 
 void rd_kafka_anyconf_destroy (int scope, void *conf);
 
+
+
+
+/**
+ * @name Next generation configuration values
+ * @{
+ *
+ */
+
+/**
+ * @brief Configuration value type
+ */
+typedef enum rd_kafka_confval_type_t {
+        RD_KAFKA_CONFVAL_INT,
+        RD_KAFKA_CONFVAL_STR,
+} rd_kafka_confval_type_t;
+
+/**
+ * @brief Configuration value (used by AdminOption).
+ *        Comes with a type, backed by a union, and a flag to indicate
+ *        if the value has been set or not.
+ */
+struct rd_kafka_confval {
+        rd_kafka_confval_type_t valuetype; /**< Value type, maps to union.*/
+        int is_set;                        /**< Value has been set. */
+        union {
+                struct {
+                        int v;             /**< Current value */
+                        int vmin;          /**< Minimum value (inclusive) */
+                        int vmax;          /**< Maximum value (inclusive) */
+                        int vdef;          /**< Default value */
+                } INT;
+                struct {
+                        bool allowempty;   /**< Allow empty string as value */
+                        size_t minlen;     /**< Minimum string length excl \0 */
+                        size_t maxlen;     /**< Maximum string length excl \0 */
+                        char *v;
+                } STR;
+        } u;
+};
+
+
+/**@}*/
+
+
 #endif /* _RDKAFKA_CONF_H_ */
