@@ -4275,23 +4275,61 @@ rd_kafka_topic_result_name (const rd_kafka_topic_result_t *topicres);
 
 
 /**
- * @brief AdminOption provides a generic mechanism for setting optional
+ * @brief AdminOptions provides a generic mechanism for setting optional
  *        parameters for the Admin API requests.
  *
- * @remark Since AdminOption is decoupled from the actual request type
+ * @remark Since AdminOptions is decoupled from the actual request type
  *         there is no enforcement to disallow setting unrelated properties,
  *         e.g. setting validate_only on a DescribeConfigs request is allowed
  *         but is silently ignored by DescribeConfigs.
  *         Future versions may introduce such enforcement.
  */
+
+
+/**
+ * @brief Sets the overall request timeout, including broker lookup,
+ *        request transmission, operation time on broker, and response.
+ *
+ * @param timeout_ms Timeout in milliseconds, use -1 for indefinite timeout.
+ *                   Defaults to socket.timeout.ms.
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success, or
+ *          RD_KAFKA_RESP_ERR__INVALID_ARG if timeout was out of range in which
+ *          case an error string will be written \p errstr.
+ *
+ * @remark This option is valid for all Admin API requests.
+ */
 RD_EXPORT rd_kafka_resp_err_t
-rd_kafka_AdminOption_set_int32 (rd_kafka_AdminOption_t *options,
-                                const char *name, int32_t value,
-                                char *errstr, size_t errstr_size);
+rd_kafka_AdminOptions_set_timeout (rd_kafka_AdminOptions_t *options,
+                                  int timeout_ms,
+                                  char *errstr, size_t errstr_size);
+
+/**
+ * @brief Sets the broker's operation timeout, such as the timeout for
+ *        CreateTopics to to complete the creation of topics on the controller,
+ *        before returning a result to the application.
+ *
+ * @param timeout_ms Timeout in milliseconds, values <= will return immediately
+ *                   after triggering topic creation.
+ *                   Defaults to FIXME what?
+ *
+ * @returns RD_KAFKA_RESP_ERR_NO_ERROR on success, or
+ *          RD_KAFKA_RESP_ERR__INVALID_ARG if timeout was out of range in which
+ *          case an error string will be written \p errstr.
+ *
+ * @remark This option is valid for CreateTopics, DeleteTopics and 
+ *         CreatePartitions.
+ */
 RD_EXPORT rd_kafka_resp_err_t
-rd_kafka_AdminOption_set_str (rd_kafka_AdminOption_t *options,
-                              const char *name, const char *value,
-                              char *errstr, size_t errstr_size);
+rd_kafka_AdminOptions_set_operation_timeout (rd_kafka_AdminOptions_t *options,
+                                             int timeout_ms,
+                                             char *errstr, size_t errstr_size);
+
+RD_EXPORT rd_kafka_resp_err_t
+rd_kafka_AdminOptions_set_validate_only (rd_kafka_AdminOptions_t *options,
+                                        int true_or_false,
+                                        char *errstr, size_t errstr_size);
+
 
 
 

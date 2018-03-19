@@ -2239,8 +2239,28 @@ void rd_kafka_conf_properties_show (FILE *fp) {
 
 /**
  * @name Configuration value methods
+ *
+ * @remark This generic interface will eventually replace the config property
+ *         used above.
  * @{
  */
+
+
+/**
+ * @brief Set up a confval.
+ *
+ * @oaram name Property name, must be a const static string (will not be copied)
+ */
+void rd_kafka_confval_init_int (rd_kafka_confval_t *confval,
+                                const char *name,
+                                int vmin, int vmax, int vdef) {
+        confval->name = name;
+        confval->valuetype = RD_KAFKA_CONFVAL_INT;
+        confval->u.INT.vmin = vmin;
+        confval->u.INT.vmax = vmax;
+        confval->u.INT.vdef = vdef;
+        confval->u.INT.v    = vdef;
+}
 
 
 /**
@@ -2255,7 +2275,7 @@ void rd_kafka_conf_properties_show (FILE *fp) {
  *          RD_KAFKA_RESP_ERR__INVALID_ARG if the value was of incorrect type,
  *          out of range, or otherwise not a valid value.
  */
-static rd_kafka_resp_err_t
+rd_kafka_resp_err_t
 rd_kafka_confval_set_type (rd_kafka_confval_t *confval,
                            const char *dispname,
                            rd_kafka_confval_type_t valuetype,

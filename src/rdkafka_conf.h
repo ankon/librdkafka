@@ -368,7 +368,8 @@ typedef enum rd_kafka_confval_type_t {
  *        Comes with a type, backed by a union, and a flag to indicate
  *        if the value has been set or not.
  */
-struct rd_kafka_confval {
+typedef struct rd_kafka_confval_s {
+        const char *name;                  /**< Property name */
         rd_kafka_confval_type_t valuetype; /**< Value type, maps to union.*/
         int is_set;                        /**< Value has been set. */
         union {
@@ -385,8 +386,19 @@ struct rd_kafka_confval {
                         char *v;
                 } STR;
         } u;
-};
+} rd_kafka_confval_t;
 
+
+
+void rd_kafka_confval_init_int (rd_kafka_confval_t *confval,
+                                const char *name,
+                                int vmin, int vmax, int vdef);
+
+rd_kafka_resp_err_t
+rd_kafka_confval_set_type (rd_kafka_confval_t *confval,
+                           const char *dispname,
+                           rd_kafka_confval_type_t valuetype,
+                           const void *valuep);
 
 /**@}*/
 

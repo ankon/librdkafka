@@ -73,9 +73,9 @@ rd_kafka_aux_topic_err_new (const char *topic, rd_kafka_resp_err_t err,
 
 
 /**
- * @brief Common AdminOption type used for all admin APIs.
+ * @brief Common AdminOptions type used for all admin APIs.
  */
-struct rd_kafka_AdminOption_s {
+struct rd_kafka_AdminOptions_s {
         /* Generic */
         rd_kafka_confval_t timeout;        /** I32: Full request timeout,
                                             *       includes looking up leader
@@ -84,56 +84,22 @@ struct rd_kafka_AdminOption_s {
                                             *       etc. */
 
         /* Specific for one or more APIs */
-        rd_kafka_confval_t broker_timeout; /**< I32: Timeout on broker.
-                                            *   Valid for: CreateTopics */
+        rd_kafka_confval_t operation_timeout; /**< I32: Timeout on broker.
+                                               *   Valid for:
+                                               *     CreateTopics
+                                               *     DeleteTopics
+                                               */
         rd_kafka_confval_t validate_only;  /**< BOOL: Only validate (on broker),
                                             *   but don't perform action.
-                                            *   Valid for: CreateTopics */
+                                            *   Valid for:
+                                            *     CreateTopics
+                                            *     AlterConfigs
+                                            *     CreatePartitions
+                                            */
 };
 
 
 
-static rd_kafka_resp_err_t
-rd_kafka_AdminOption_set_type (rd_kafka_AdminOption_t *options,
-                               const char *name,
-                               rd_kafka_confval_type_t valuetype,
-                               const void *valuep,
-                               char *errstr, size_t errstr_size) {
-        rd_kafka_confval_t *confval;
-
-        if (!strcmp(name, "timeout"))
-                confval = &options->timeout;
-        else if (!strcmp(name, "broker.timeout"))
-                confval = &options->broker_timeout;
-        else {
-                rd_snprintf(errstr, errstr_size,
-                            "Unknown admin option \"%s\"", name);
-                return RD_KAFKA_RESP_ERR__INVALID_ARG;
-        }
-
-        return rd_kafka_confval_set_type(confval, name, valuetype, value,
-                                         errstr, errstr_size);
-}
-
-RD_EXPORT rd_kafka_resp_err_t
-rd_kafka_AdminOption_set_int32 (rd_kafka_AdminOption_t *options,
-                                const char *name, int32_t value,
-                              char *errstr, size_t errstr_size) {
-        int intvalue = (int)value;
-        return rd_kafka_AdminOption_set_any(options, name,
-                                            RD_KAFKA_CONFVAL_INT, &intvalue,
-                                            errstr, errstr_size);
-}
-
-RD_EXPORT rd_kafka_resp_err_t
-rd_kafka_AdminOption_set_str (rd_kafka_AdminOption_t *options,
-                              const char *name, const char *value,
-                              char *errstr, size_t errstr_size) {
-        int intvalue = (int)value;
-        return rd_kafka_AdminOption_set_any(options, name,
-                                            RD_KAFKA_CONFVAL_STR, value,
-                                            errstr, errstr_size);
-}
 
 
 /**
