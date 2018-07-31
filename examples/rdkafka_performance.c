@@ -1245,6 +1245,17 @@ int main (int argc, char **argv) {
                         stats_fp = stdout;
         }
 
+	if (verbosity > 1) {
+                /* Dump the configuration */
+                size_t count;
+                size_t i;
+                const char **dump = rd_kafka_conf_dump(conf, &count);
+                for (i = 0; i < count; i += 2) {
+                        fprintf(stderr, "%% %s=%s\n", dump[i], dump[i+1]);
+                }
+                rd_kafka_conf_dump_free(dump, count);
+        }
+
 	if (msgcnt != -1)
 		forever = 0;
 
