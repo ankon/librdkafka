@@ -118,8 +118,7 @@ avg | int gauge | | Average value
 sum | int gauge | | Sum of values
 cnt | int gauge | | Number of values sampled
 stddev | int gauge | | Standard deviation (based on histogram)
-mean | int gauge | | Mean value (based on histogram)
-histoor | int gauge | | Values skipped due to out of histogram range
+outofrange | int gauge | | Values skipped due to out of histogram range
 hdrsize | int gauge | | Memory size of Hdr Histogram
 p50 | int gauge | | 50th percentile
 p75 | int gauge | | 75th percentile
